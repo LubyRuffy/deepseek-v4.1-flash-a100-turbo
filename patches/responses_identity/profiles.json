@@ -1,0 +1,45 @@
+{
+  "upstream_commit": "7ca31ef5993dc4426d912f32b8eb3cd70fb7a078",
+  "profiles": [
+    {
+      "name": "h100-v0.31.0",
+      "files": {
+        "context.py": {
+          "before_sha256": "982d70b9aab79b072be0fa37f4891eee40c454be777fd8853a5f96a5df067ce6",
+          "after_sha256": "d7eb2970e70ece5acad0becc3c4b809bfc91864df3480f69653a549f91f9a40e",
+          "patch": "h100-context.py.patch"
+        },
+        "serving.py": {
+          "before_sha256": "c701580373b32b57e2da6091ec3c242bbae0439974b5af088ba93cc588aaf3c8",
+          "after_sha256": "7503bcea0c9decd12cdd0762123e316b5262b8b373a47165233158e6e2c3fa3a",
+          "patch": "h100-serving.py.patch"
+        },
+        "streaming_events.py": {
+          "before_sha256": "e88c7d4d89a7f7b20adce353b1f6245c886a424f60009e31b96385284d2ce866",
+          "after_sha256": "e4908e758b41523641185099c6851d698705dbd090ca829e6fee8ed2d2b3477a",
+          "patch": "h100-streaming_events.py.patch"
+        }
+      }
+    },
+    {
+      "name": "a100-v0.13.0",
+      "files": {
+        "context.py": {
+          "before_sha256": "558e208c2d55086e835278ece7ff6f49e59812710664e49b9c878db73a729355",
+          "after_sha256": "06e5d566da2583ae3225758ca32534ae7f909e08a23b92ff0dfcdb24b26ca6c6",
+          "patch": "a100-context.py.patch"
+        },
+        "serving.py": {
+          "before_sha256": "dc720ca7038f73581f5576b0c5c56e086167fea3323f29f2d76bbacdb5b5b6db",
+          "after_sha256": "235dc98ab91468ad2b1e6bc0540724e5fcb7373b86a2e23f1df37a6cab03575c",
+          "patch": "a100-serving.py.patch"
+        },
+        "streaming_events.py": {
+          "before_sha256": "f2681d82bdb1d041b3d78535db90b556d29c6474f790b783079c7ea156319017",
+          "after_sha256": "8b967da0214bc8574c857ef3f59e385514f4fca9035933e08f30367fc5840b25",
+          "patch": "a100-streaming_events.py.patch"
+        }
+      }
+    }
+  ]
+}

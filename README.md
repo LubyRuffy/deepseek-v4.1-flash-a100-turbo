@@ -88,3 +88,14 @@ curl http://127.0.0.1:8083/v1/chat/completions \
 ```
 
 [Apache-2.0](LICENSE) · [第三方声明](NOTICE)
+
+## Native Responses identity backport
+
+本 fork 增加针对已登记 H100/A100 源码的原生 `/v1/responses` 流式身份修复，
+保留原生接口与既有部署参数。补丁源版本、验证矩阵、逐节点部署和回滚见
+[修复运行手册](docs/native-responses-identity.md)。新增文档不改变上文历史
+A800 测速与 benchmark 口径。
+
+[当前功能](docs/FEATURES.md) · [当前契约](docs/CONTRACTS.md) ·
+[架构](ARCHITECTURE.md) · [API](docs/API.md) · [配置](docs/CONFIG.md) ·
+[CLI](docs/CLI.md) · [测试](docs/TESTING.md) · [变更记录](CHANGELOG.md)

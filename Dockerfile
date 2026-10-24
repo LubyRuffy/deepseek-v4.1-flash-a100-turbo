@@ -12,6 +12,8 @@ ENV PATH=/usr/local/cuda/bin:/usr/local/nvidia/bin:/usr/local/sbin:/usr/local/bi
     LD_LIBRARY_PATH=/usr/local/cuda/compat:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/nvidia/lib \
     CUDA_HOME=/usr/local/cuda NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=compute,utility
 COPY patches /opt/deepseek-sm80/patches
-RUN /usr/bin/python3 /opt/deepseek-sm80/patches/install.py
+RUN /usr/bin/python3 /opt/deepseek-sm80/patches/install.py && \
+    /usr/bin/python3 /opt/deepseek-sm80/patches/responses_identity/install.py \
+        --package-root /usr/local/lib/python3.12/dist-packages/vllm
 WORKDIR /vllm-workspace
 ENTRYPOINT ["/usr/local/bin/vllm"]

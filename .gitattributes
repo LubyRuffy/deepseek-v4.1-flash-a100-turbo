@@ -1,0 +1,2 @@
+# A blank unified-diff context line is one literal space.
+patches/responses_identity/*.patch -whitespace

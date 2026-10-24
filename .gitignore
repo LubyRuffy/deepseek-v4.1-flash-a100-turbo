@@ -10,3 +10,5 @@ router/config.json
 .router-venv/
 .venv/
 .pytest_cache/
+dist/
+.coverage
