@@ -92,7 +92,9 @@ curl http://127.0.0.1:8083/v1/chat/completions \
 ## Native Responses identity backport
 
 本 fork 增加针对已登记 H100/A100 源码的原生 `/v1/responses` 流式身份修复，
-保留原生接口与既有部署参数。补丁源版本、验证矩阵、逐节点部署和回滚见
+保留原生接口与既有部署参数。A100 tokenizer 同时接受标准 Responses
+`input_text`/`output_text` 历史，以支持实际工具执行后的续写；H100 保留其已有
+文本类型支持与原 tokenizer。补丁源版本、验证矩阵、逐节点部署和回滚见
 [修复运行手册](docs/native-responses-identity.md)。新增文档不改变上文历史
 A800 测速与 benchmark 口径。
 

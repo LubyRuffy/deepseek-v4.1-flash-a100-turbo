@@ -3,6 +3,25 @@
 This file tracks changes to this fork. Earlier optimization and benchmark history
 remains in the existing README, reports and Git history.
 
+## 0.1.1 - 2026-10-24
+
+### Fixed
+
+- `F-131` Accept standard Responses `input_text` and `output_text` blocks in
+  the A100 custom tokenizer alongside legacy `text`, preserving block order
+  and the original caller input. This corrects typed-history continuation that
+  could return 400 after a function and real FOFA execution had succeeded
+  (`C-006`). H100 already accepts these types and retains its existing tokenizer
+  and reasoning settings.
+
+### Changed
+
+- `F-150` Require actual HTTP typed-history plus `function_call_output`
+  continuation and final SSE success for tool-chain acceptance; a successful
+  first tool call alone is insufficient (`C-003`, `C-006`). The A100 incremental
+  upgrade verifies the exact prior and new tokenizer hashes while retaining
+  the existing Responses identity correction (`C-001`).
+
 ## 0.1.0 - 2026-10-24
 
 ### Added

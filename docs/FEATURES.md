@@ -5,6 +5,7 @@
     - `F-110` Existing SM80 model deployment
     - `F-120` Reviewed source-patch installation
     - `F-130` Native Responses stream identity
+    - `F-131` Standard typed text history normalization
     - `F-140` Optional multi-node routing
     - `F-150` Verification and benchmark clients
 
@@ -43,6 +44,18 @@
 - 失败表现：不支持的源版本拒绝安装；HTTP/生成错误沿用运行时原有语义。
 - 关联契约：`C-001`、`C-002`、`C-003`。
 - 证据：`patches/responses_identity/install.py`、`tests/test_responses_identity_installer.py`、`tests/test_responses_identity_runtime.py`。
+
+## F-131 Standard typed text history normalization
+
+- 目的：让 A100 custom tokenizer 接受标准 Responses 文本历史并继续工具调用。
+- 使用者：原生 Responses 客户端及使用类型化历史续写的网关。
+- 入口：`POST /v1/responses` 的 typed input、历史回放与 `function_call_output` 续写。
+- 输入：文本块 `text`、`input_text`、`output_text`；保留既有字符串及图像处理边界。
+- 输出：按原顺序归一化的文本，客户端传入对象不被就地修改。
+- 前置条件：A100 安装对应 tokenizer 补丁；H100 既有 tokenizer 已接受三种文本类型，不替换其文件。
+- 失败表现：未知内容类型仍明确拒绝；第一轮函数或远端业务成功不能代替续写成功。
+- 关联契约：`C-001`、`C-003`、`C-006`。
+- 证据：`patches/files/vllm/tokenizers/deepseek_v41.py`、`patches/manifest.json`、`tests/test_deepseek_v41_text_content.py`。
 
 ## F-140 Optional multi-node routing
 

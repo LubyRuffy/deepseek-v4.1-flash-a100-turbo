@@ -5,7 +5,7 @@
 - 状态：active
 - 类型：security / compatibility
 - 作用范围：基础补丁和 Responses 补丁安装。
-- 关联功能：`F-110`、`F-120`、`F-130`。
+- 关联功能：`F-110`、`F-120`、`F-130`、`F-131`。
 - 契约内容：补丁必须验证已登记的 before/after SHA256；Responses 三个目标文件必须整体匹配同一支持 profile，全部校验完成后才允许写入。
 - 允许行为：对已安装的同一补丁幂等验证。
 - 禁止行为：仅凭 GPU 型号或包版本匹配、对未知源码模糊替换、混用两个 profile。
@@ -37,8 +37,8 @@
 - 状态：active
 - 类型：lifecycle / consistency
 - 作用范围：H100/A100 补丁发布与生产验收。
-- 关联功能：`F-120`、`F-130`、`F-150`。
-- 契约内容：部署逐台进行，维护节点停止接收新流量后等待既有调用排空，另一个节点保持可用；启动前验证目标三文件 after SHA256，记录镜像/容器身份及版本；原生调用通过后恢复绑定，再验证真实业务工具；失败重新隔离。
+- 关联功能：`F-120`、`F-130`、`F-131`、`F-150`。
+- 契约内容：部署逐台进行，维护节点停止接收新流量后等待既有调用排空，另一个节点保持可用；启动前验证目标三文件 after SHA256，另核验 A100 tokenizer 的精确版本哈希，记录镜像/容器身份及版本；原生调用与标准 typed 历史续写通过后恢复绑定，再验证真实业务工具；失败重新隔离。
 - 允许行为：保留镜像和原文件用于单节点回滚；验证失败立即保持该节点隔离。
 - 禁止行为：同时重启两节点、未经授权中断活动调用、用 Chat 兼容器代替本次修复、修改网关能力绑定或放松身份检查。
 - 失败语义：哈希、健康、工具调用或 SSE 验证失败则不恢复该节点流量；记录真实失败和回滚状态。
@@ -79,3 +79,19 @@
 - 证据：`router/README.md`、`router/routing_identity.py`、`router/rank_proxy.py`、`router/adaptive_router.py`、`tests/test_routing_identity.py`。
 - 变更规则：路由行为修改须同步 router 文档、测试和本契约。
 - 来源：已有两节点 router 实现。
+
+## C-006 Standard text contents and immutable caller input
+
+- 状态：active
+- 类型：API / data / compatibility
+- 作用范围：A100 custom DeepSeek tokenizer 的消息内容归一化。
+- 关联功能：`F-131`。
+- 契约内容：`text`、`input_text` 和 `output_text` 块按同一文本路径处理，沿用原有顺序与分隔方式；归一化使用副本，不就地修改调用者的消息、嵌套内容或工具历史。
+- 允许行为：标准 typed input 与先前生成的 typed output 原样进入后续历史，携带实际调用 ID 的 `function_call_output` 正常续写。
+- 禁止行为：要求客户端把标准文本块改成非标准结构规避 400、忽略未知内容类型、用 A100 tokenizer 覆盖已有支持的 H100 tokenizer 或改变其推理设置。
+- 失败语义：未知内容类型保留原有明确拒绝；函数已生成或 FOFA 已执行但续写 400 仍判定整条工具链失败。
+- 不变量：归一化结果具有相同文本语义，原请求对象保持不变，原生 Responses 及网关身份校验继续启用。
+- 边界条件：既有字符串、图像 placeholder 与非文本拒绝规则保持；本补丁不承诺新增内容类型、跨节点状态或推理 effort 支持。
+- 证据：`patches/files/vllm/tokenizers/deepseek_v41.py`、`patches/manifest.json`、`tests/test_deepseek_v41_text_content.py`。
+- 变更规则：文本类型、顺序、输入所有权或 tokenizer 升级变化须同步 API、单元测试及真实 HTTP typed 历史续写验收。
+- 来源：A100 原生 Responses 首次函数和 FOFA 执行成功后，标准 typed input 续写仍返回 400 的后续缺陷。

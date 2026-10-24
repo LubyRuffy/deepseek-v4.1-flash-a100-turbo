@@ -90,7 +90,7 @@
     {
       "target": "vllm/tokenizers/deepseek_v41.py",
       "before": "d6e9cbce7c5f127819452fa5d03dd4f22ad9f136dd202a54b5b31fe42402cae2",
-      "after": "897b350f5426b54505abaea2429dc5f3263c6c1d241dd8358d5375100d9164a2"
+      "after": "f783ad0fe2de207609059c1930dae0f52c8c43a22ca7b9db2ad89cffbf866fe5"
     },
     {
       "target": "vllm/distributed/device_communicators/cuda_communicator.py",

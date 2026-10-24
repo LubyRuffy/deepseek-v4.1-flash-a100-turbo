@@ -16,7 +16,7 @@ call ID、每条消息的文本 logprobs，并保证零参数调用也发参数�
 网关调用身份校验，不把内部 MCP 协议暴露为公共选择格式。
 本说明是当前实现与验收要求；发布和部署完成情况必须由对应运行收据证明。
 
-关联：`F-120`、`F-130`、`F-150`；`C-001`、`C-002`、`C-003`、`C-004`。
+关联：`F-120`、`F-130`、`F-131`、`F-150`；`C-001`、`C-002`、`C-003`、`C-004`、`C-006`。
 
 ## Source profiles
 
@@ -28,7 +28,7 @@ call ID、每条消息的文本 logprobs，并保证零参数调用也发参数�
 | `streaming_events.py` | Stable item/call identities, message logprobs, arguments.done and completed-item collection |
 | `serving.py` | Streaming finalization reuses those items; existing usage/logging and non-streaming path retained |
 
-`patches/responses_identity/profiles.json` 为唯一哈希门禁，记录
+`patches/responses_identity/profiles.json` 为 Responses 三模块的唯一哈希门禁，记录
 `h100-v0.31.0` 与 `a100-v0.13.0` 三文件各自 before/after SHA256。
 包版本字符串和 GPU 型号只说明来源，不能代替文件哈希。
 
@@ -41,6 +41,29 @@ call ID、每条消息的文本 logprobs，并保证零参数调用也发参数�
 
 升级 vLLM、换基础镜像或修改三个模块后必须重新审查并登记 profile。
 此次补丁不包含模型权重、kernel、工具解析器或 GPU 性能优化。
+
+## A100 standard text continuation correction
+
+0.1.1 还修复一个与调用 ID 不同的输入问题：0.1.0 的 A100 custom tokenizer
+`_normalize_messages` 仅接受旧 `text` 块，漏掉 Responses 标准 `input_text`
+和 `output_text`。因此第一轮函数及真实 FOFA 调用可能已经成功，typed 历史
+回传到模型时仍返回 400；首轮成功不能作为完整工具链通过的证据。
+
+补丁只将这三个文本类型纳入已有归一化路径，保留文本顺序、字符串/图像处理、
+未知类型拒绝和调用者原输入。实现位于
+`patches/files/vllm/tokenizers/deepseek_v41.py`，其 after SHA256 与
+`patches/manifest.json` 同步；回归为 `tests/test_deepseek_v41_text_content.py`。
+这不属于 Responses 三模块 profile，不改变三模块身份修复。
+
+**H100 原 tokenizer 已支持三种文本块，不安装 A100 tokenizer。** 保留 H100
+自身的源码、推理 effort/xhigh 支持差异及启动参数；不能为统一版本而覆盖它。
+两节点继续使用原生 Responses，不修改客户端标准输入来绕过问题。
+
+已部署 0.1.0 的 A100 增量升级以确切旧镜像和旧 tokenizer after 哈希为起点，
+只写新 tokenizer 并校验新 manifest after；原三模块用身份安装器 `--check`
+确认为 already-applied。不得在生产盲跑全量基础 installer，因为旧已安装
+payload 不一定仍属于新 manifest 接受的 before/after。保留整个旧镜像回滚，
+记录新层只含预期 tokenizer 变化，其他运行文件、挂载、参数及凭证配置不变。
 
 ## Install and check
 
@@ -69,7 +92,7 @@ H100 使用相同发布包自动匹配其自身 profile，保留原镜像和既�
 ## Regression commands
 
 ```bash
-python3 -m pytest -q tests/test_responses_identity_installer.py
+python3 -m pytest -q tests/test_responses_identity_installer.py tests/test_deepseek_v41_text_content.py
 python3 scripts/docs_check.py
 make check
 ```
@@ -98,15 +121,17 @@ CPU 模块回归不生成真实模型 token，不代替后续直接 HTTP 验收�
 1. 从已验证主线构建版本化发布包。记录 tag/commit、包 SHA256、补丁
    profile 和三个模块的 before/after。发布包不含密钥和权重。
 2. 读回两节点的实际容器/进程、镜像、Python/vLLM 路径、源哈希、参数及
-   网关原生能力声明。保存各自回滚镜像/原文件和可复现的启动参数。
+   网关原生能力声明。另记录 A100 tokenizer 旧/新哈希及 H100 tokenizer
+   保持不变的哈希。保存各自回滚镜像/原文件和可复现的启动参数。
 3. **每次只维护一台**：仅将该节点对应 Gateway binding 的 `enabled`
    临时设为 false，其他字段及原生 Responses 能力不变。另一节点继续在线。
 4. 等待该节点 active/queued 清零，识别绕过网关的直接调用，再优雅停止
    服务/容器。不能因排空超时就自动杀死活动调用；应保留隔离和状态证据。
-5. 安装补丁、复核完整 after 哈希及语法，使用原模型、挂载和服务参数启动。
+5. 按各节点范围安装补丁、复核完整 after 哈希及语法；A100 增量层只改
+   tokenizer，H100 不安装该 tokenizer。使用原模型、挂载和服务参数启动。
    读回实际运行镜像/进程，不能只看本地发布文件。
-6. 在隔离节点直接验收原生 Responses；通过后恢复该 binding enabled，
-   使用原 Gateway Key 验证真实 hosted tool 及 SSE/持久执行记录。
+6. 在隔离节点直接验收原生 Responses 及标准 typed 历史工具续写；通过后恢复
+   该 binding enabled，使用原 Gateway Key 验证真实 hosted tool 及 SSE/持久执行记录。
 7. 确认恢复节点健康且承担请求，再重复另一台。全程不重启宿主机、不同时
    停两台、不更改为 Chat-only 能力。
 
@@ -127,15 +152,18 @@ item/call ID、计数及耗时；验收凭证只从已有授权环境传入。
    的两个请求不要求 token 数天然相同；精确比较使用确定性 fixture。
 4. 若原服务启用 response store，使用实际返回的 `response.id` 和
    `function_call.call_id` 发 `function_call_output`，验证真实续接。
-5. 完整解析 SSE，要求单一成功终态、非空合法输出及预期事件顺序；收到
+5. 使用标准 typed user `input_text`、实际响应的全部输出项（包括已有
+   `output_text`）及匹配 `call_id` 的 `function_call_output` 发真实 HTTP
+   显式历史续写，确认无 400 且得到最终回答。不得只测字符串历史或改写输入。
+6. 完整解析 SSE，要求单一成功终态、非空合法输出及预期事件顺序；收到
    HTTP 200、健康通过、模型口头“已调用”均不足以证明成功。
 
 ## Gateway hosted-tool and SSE acceptance
 
 原 Key 通过原生 Responses 路径选择 `mcp_fofa_search`，使用公开且最小的
 查询进行一次实际业务调用。执行记录应包含当前已授权服务器的真实 MCP attempt，
-远端业务成功标志及最终回答。关联请求 ID 核对 wire、Provider attempt、MCP
-attempt 和持久记录，确认终态成功；并补跑 Chat SSE 防回归。
+远端业务成功标志、后续模型 typed-history 续写及最终回答；首轮 FOFA 成功而续写
+400 仍判失败。关联请求 ID 核对 wire、Provider attempt、MCP attempt 和持久记录，确认终态成功；并补跑 Chat SSE 防回归。
 
 不为通过验收自动增授权限、不输出远端凭证、不保存原始账户/业务数据，不用
 管理员全集目录代替当前 Key 权限，不修改网关的 ID 不一致拒绝规则。
@@ -144,8 +172,8 @@ attempt 和持久记录，确认终态成功；并补跑 Chat SSE 防回归。
 
 任一节点哈希、启动、原生流、续接或业务验收失败：保持该 binding 隔离，保留
 另一台可用；按原服务停止/排空流程恢复原镜像或该节点持久备份中的完整三个
-源码文件，核验旧哈希并用原参数启动。再次完成健康、原 HTTP 控制及业务验证后
-再恢复 binding enabled。
+源码文件（A100 0.1.1 增量也须恢复旧 tokenizer），核验旧哈希并用原参数启动。
+再次完成健康、原 HTTP 控制及业务验证后再恢复 binding enabled。
 
 仅把源码文件换回去不代表已运行进程回滚；必须读取新进程身份和实际加载文件。
 回滚不重写历史响应，原有 response store 的重启/过期边界仍然适用。
@@ -153,7 +181,7 @@ attempt 和持久记录，确认终态成功；并补跑 Chat SSE 防回归。
 ## Evidence record
 
 每次交付记录：版本与 commit、发布包 SHA256、每节点安装 profile、前后源
-SHA256、实际容器/镜像/进程身份、网关原生能力保留、排空及恢复时间、各验收
-request ID、事件/调用数量、耗时、持久业务结果布尔值及任何失败/回滚。
+SHA256、A100 tokenizer 前后哈希及 H100 tokenizer 不变证据、实际容器/镜像/进程
+身份、网关原生能力保留、排空及恢复时间、各验收 request ID、事件/调用数量、耗时、持久业务结果布尔值及任何失败/回滚。
 
 完成状态只能来自这些新鲜证据；本文件中的步骤不是已经执行的部署记录。
